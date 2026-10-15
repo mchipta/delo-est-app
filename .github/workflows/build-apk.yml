@@ -1,21 +1,49 @@
-import re
-import sys
+name: Build APK
 
-p = sys.argv[1]
-s = open(p, encoding='utf-8').read()
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
 
-perm = '    <uses-permission android:name="android.permission.INTERNET"/>\n'
-intents = (
-    '        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="tel"/></intent>\n'
-    '        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="https"/></intent>\n'
-)
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-if '<queries>' in s:
-    s = s.replace('<queries>', '<queries>\n' + intents, 1)
-    s = s.replace('<application', perm + '    <application', 1)
-else:
-    s = s.replace('<application', perm + '    <queries>\n' + intents + '    </queries>\n    <application', 1)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-s = re.sub(r'android:label="[^"]*"', 'android:label="ДелоЕсть"', s, count=1)
-open(p, 'w', encoding='utf-8').write(s)
-print('manifest patched')
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Создаём Android-проект
+        run: flutter create --org ru.deloest --project-name delo_est --platforms=android build_app
+
+      - name: Копируем наш код
+        run: |
+          cp pubspec.yaml build_app/pubspec.yaml
+          rm -rf build_app/lib
+          mkdir build_app/lib
+          cp main.dart api.dart build_app/lib/
+
+      - name: Правим AndroidManifest
+        run: python3 patch_manifest.py build_app/android/app/src/main/AndroidManifest.xml
+
+      - name: Зависимости
+        working-directory: build_app
+        run: flutter pub get
+
+      - name: Сборка APK
+        working-directory: build_app
+        run: flutter build apk --release
+
+      - name: Сохраняем APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: delo-est-apk
+          path: build_app/build/app/outputs/flutter-apk/app-release.apk
