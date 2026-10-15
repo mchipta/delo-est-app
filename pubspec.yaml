@@ -1,0 +1,19 @@
+name: delo_est
+description: ДелоЕсть — подработка рядом с домом
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  crypto: ^3.0.3
+  shared_preferences: ^2.2.0
+  url_launcher: ^6.2.0
+  cached_network_image: ^3.3.0
+
+flutter:
+  uses-material-design: true
